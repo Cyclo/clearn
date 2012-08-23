@@ -4,8 +4,8 @@
 #include <stdlib.h>
 
 void parse(char *);
-enum state {PROGRAM,IDENT,NUM,FUNC,DECL};
-enum tokens{TIDENT,TCONST};
+enum state {PROGRAM,IDENT,NUM,FUNC,DECL,OP,DELIM};
+enum tokens{TIDENT,TCONST,TASSIGN,TDELIM};
 
 struct token{
 
@@ -16,8 +16,6 @@ struct token{
   
   struct token *next;
 };
-
-
 
 int main()
 {
@@ -51,6 +49,10 @@ void dump_list(struct token *root)
       printf("Ident: %s\n",tmp->s_val);
     }else if(tmp->type == TCONST){
       printf("Constant: %d\n",tmp->i_val);
+    }else if(tmp->type == TASSIGN){
+      printf("Assignment\n");
+    }else if(tmp->type == TDELIM){
+      printf("Func Delim\n");
     }else{
 
     }
@@ -83,6 +85,7 @@ void parse(char *s)
 
   struct token *t_ident;
   struct token *t_num;
+  struct token *t_op;
   struct token *root;
 
   root = malloc(sizeof(struct token));
@@ -94,9 +97,26 @@ void parse(char *s)
     
     if(c == ' ') continue;
     if(c == '\n') continue;
-    
+      
+    if(c == '='){
+      
+      t_op = malloc(sizeof(struct token));
+      add_list(root,t_op);
+      t_op->next = NULL;
+      t_op->type = TASSIGN;
+      
+      state = OP;
 
-    if(isalpha(c)){
+    }else if(c == ','){ 
+      
+      t_op = malloc(sizeof(struct token));
+      add_list(root,t_op);
+      t_op->next = NULL;
+      t_op->type = TDELIM;
+
+      state = TDELIM;
+
+    }if(isalpha(c)){
       
       if(state != IDENT){
         
@@ -115,7 +135,7 @@ void parse(char *s)
     }else if(isdigit(c)){
       
       if(state == IDENT) {
-        // Add to identifier
+
         t_ident->s_val[t_ident->curs++] = c;
         t_ident->s_val[t_ident->curs+1] = '\0';
 
