@@ -4,8 +4,8 @@
 #include <stdlib.h>
 
 void parse(char *);
-enum state {PROGRAM,IDENT,NUM,FUNC,DECL,OP,DELIM};
-enum tokens{TIDENT,TCONST,TASSIGN,TDELIM};
+enum state {PROGRAM,IDENT,NUM,FUNC,DECL,OP,DELIM,QUOTE};
+enum tokens{TIDENT,TCONST,TASSIGN,TDELIM,TSTRING};
 
 struct token{
 
@@ -17,16 +17,18 @@ struct token{
   struct token *next;
 };
 
-int main()
+int 
+main()
 {
 
-  char str[255] = "Hello = 10\n func(20,hello);";
+  char str[255] = "Hello = 10\ntest=\"str\" another=\"t123,\" func(20,hello)";
   parse(str);
 
   return 0;
 }
 
-void add_list(struct token *root,struct token *next)
+void 
+add_list(struct token *root,struct token *next)
 {
   struct token *tmp;
   
@@ -36,13 +38,15 @@ void add_list(struct token *root,struct token *next)
   }
   
   tmp = root->next;
-  while(tmp->next != NULL)
+  while(tmp->next != NULL){
     tmp = tmp->next;
+  }
 
   tmp->next = next;
 }
 
-void dump_list(struct token *root)
+void 
+dump_list(struct token *root)
 {
   struct token *tmp = root;
   do{
@@ -55,6 +59,8 @@ void dump_list(struct token *root)
       printf("Assignment\n");
     }else if(tmp->type == TDELIM){
       printf("Func Delim\n");
+    }else if(tmp->type == TSTRING){
+      printf("String: %s\n", tmp->s_val);
     }else{
 
     }
@@ -62,25 +68,30 @@ void dump_list(struct token *root)
 
 }
 
-void free_list(struct token *root)
-{
+void 
+free_list(struct token *root){
   struct token *tmp = root;
-  if(root == NULL) return;
+  
+  if(root == NULL) { 
+    return;
+  }
 
   if(root->next == NULL){
-    
     free(root);
     return;
   }
 
-  while((tmp = tmp->next) != NULL)
+  while((tmp = tmp->next) != NULL){
     free(tmp);
+  }
   
-  if(root)
+  if(root){
     free(root);
+  }
 }
 
-struct token *create_token(struct token *root, int type)
+struct token *
+create_token(struct token *root, int type)
 {
   struct token *tmp = malloc(sizeof(struct token));
 
@@ -94,13 +105,25 @@ struct token *create_token(struct token *root, int type)
   tmp->i_val = 0;
   tmp->curs = 0;
 
-  if(root)
+  if(root){
     add_list(root,tmp);
-  
+  }
+
   return tmp;
 }
 
-void parse(char *s)
+void 
+astrval(struct token *t, char c)
+{
+  if(t == NULL){
+    return;
+  }
+  t->s_val[t->curs++] = c;
+  t->s_val[t->curs+1] = '\0';
+}
+
+void 
+parse(char *s)
 {
   int state = PROGRAM;
   char c,*p;
@@ -115,37 +138,54 @@ void parse(char *s)
     
     if(c == ' ') continue;
     if(c == '\n') continue;
+    
+    if(c == '"'){
+    
+      if(state == QUOTE){
+      
+        state = PROGRAM;
+        continue; 
+      }
 
-    if(c == '='){
+      t_tmp = create_token(t_root,TSTRING);
+      state = QUOTE;
+      
+    }else if(c == '='){
+      
+      if(state == QUOTE){
+        astrval(t_tmp,c);
+        continue;
+      }
 
       t_tmp = create_token(t_root,TASSIGN);
       state = OP;
 
     }else if(c == ','){ 
       
-      t_tmp = create_token(t_root,TDELIM);
-      state = TDELIM;
+      if(state == QUOTE){
+        astrval(t_tmp,c);
+        continue;
+      }
 
-    }if(isalpha(c)){
-      
-      if(state != IDENT){
+      t_tmp = create_token(t_root,TDELIM);
+      state = DELIM;
+
+    }else if(isalpha(c)){
         
+      if( state != QUOTE && state != IDENT ){
         t_tmp = create_token(t_root,TIDENT);
-        t_tmp->curs = 0;
       }
       
-      t_tmp->s_val[t_tmp->curs++] = c;
-      t_tmp->s_val[t_tmp->curs+1] = '\0';
+      if(state != QUOTE){
+        state = IDENT;
+      }
 
-      state = IDENT;
+      astrval(t_tmp,c);
          
     }else if(isdigit(c)){
       
-      if(state == IDENT) {
-
-        t_tmp->s_val[t_tmp->curs++] = c;
-        t_tmp->s_val[t_tmp->curs+1] = '\0';
-
+      if(state == IDENT || state == QUOTE) {
+        astrval(t_tmp,c);
         continue;
       }
       
