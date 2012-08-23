@@ -105,12 +105,10 @@ void parse(char *s)
   int state = PROGRAM;
   char c,*p;
 
-  struct token *t_ident;
-  struct token *t_num;
-  struct token *t_op;
-  struct token *root;
+  struct token *t_tmp;
+  struct token *t_root;
 
-  root = create_token(NULL,-1);
+  t_root = create_token(NULL,-1);
   
   for(p = s; p != s+strlen(s); p++){
     c = *p;
@@ -120,24 +118,24 @@ void parse(char *s)
 
     if(c == '='){
 
-      t_op = create_token(root,TASSIGN);
+      t_tmp = create_token(t_root,TASSIGN);
       state = OP;
 
     }else if(c == ','){ 
       
-      t_op = create_token(root,TDELIM);
+      t_tmp = create_token(t_root,TDELIM);
       state = TDELIM;
 
     }if(isalpha(c)){
       
       if(state != IDENT){
         
-        t_ident = create_token(root,TIDENT);
-        t_ident->curs = 0;
+        t_tmp = create_token(t_root,TIDENT);
+        t_tmp->curs = 0;
       }
       
-      t_ident->s_val[t_ident->curs++] = c;
-      t_ident->s_val[t_ident->curs+1] = '\0';
+      t_tmp->s_val[t_tmp->curs++] = c;
+      t_tmp->s_val[t_tmp->curs+1] = '\0';
 
       state = IDENT;
          
@@ -145,22 +143,22 @@ void parse(char *s)
       
       if(state == IDENT) {
 
-        t_ident->s_val[t_ident->curs++] = c;
-        t_ident->s_val[t_ident->curs+1] = '\0';
+        t_tmp->s_val[t_tmp->curs++] = c;
+        t_tmp->s_val[t_tmp->curs+1] = '\0';
 
         continue;
       }
       
       if(state != NUM){
         
-        t_num = create_token(root,TCONST);
-        t_num->i_val = 0;
+        t_tmp = create_token(t_root,TCONST);
+        t_tmp->i_val = 0;
 
         state = NUM;
       }
 
-      t_num->i_val *= 10;
-      t_num->i_val += c - '0';
+      t_tmp->i_val *= 10;
+      t_tmp->i_val += c - '0';
 
     }else{
      
@@ -169,7 +167,7 @@ void parse(char *s)
     
   }
 
-  dump_list(root);
-  free_list(root);
+  dump_list(t_root);
+  free_list(t_root);
 
 }
