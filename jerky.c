@@ -30,8 +30,10 @@ void add_list(struct token *root,struct token *next)
 {
   struct token *tmp;
   
-  if(root->next == NULL)
+  if(root->next == NULL){
     root->next = next;
+    return;  
+  }
   
   tmp = root->next;
   while(tmp->next != NULL)
@@ -78,6 +80,26 @@ void free_list(struct token *root)
     free(root);
 }
 
+struct token *create_token(struct token *root, int type)
+{
+  struct token *tmp = malloc(sizeof(struct token));
+
+  if(!tmp){
+    fprintf(stderr,"Out of memory!\n");
+    exit(0);
+  }
+  
+  tmp->next = NULL;
+  tmp->type = type;
+  tmp->i_val = 0;
+  tmp->curs = 0;
+
+  if(root)
+    add_list(root,tmp);
+  
+  return tmp;
+}
+
 void parse(char *s)
 {
   int state = PROGRAM;
@@ -88,42 +110,29 @@ void parse(char *s)
   struct token *t_op;
   struct token *root;
 
-  root = malloc(sizeof(struct token));
-  root->next = NULL;
-  root->type = -1;
+  root = create_token(NULL,-1);
   
   for(p = s; p != s+strlen(s); p++){
     c = *p;
     
     if(c == ' ') continue;
     if(c == '\n') continue;
-      
+
     if(c == '='){
-      
-      t_op = malloc(sizeof(struct token));
-      add_list(root,t_op);
-      t_op->next = NULL;
-      t_op->type = TASSIGN;
-      
+
+      t_op = create_token(root,TASSIGN);
       state = OP;
 
     }else if(c == ','){ 
       
-      t_op = malloc(sizeof(struct token));
-      add_list(root,t_op);
-      t_op->next = NULL;
-      t_op->type = TDELIM;
-
+      t_op = create_token(root,TDELIM);
       state = TDELIM;
 
     }if(isalpha(c)){
       
       if(state != IDENT){
         
-        t_ident = malloc(sizeof(struct token));
-        add_list(root,t_ident);
-        t_ident->type = TIDENT;
-        t_ident->next = NULL;
+        t_ident = create_token(root,TIDENT);
         t_ident->curs = 0;
       }
       
@@ -143,12 +152,10 @@ void parse(char *s)
       }
       
       if(state != NUM){
-      
-        t_num = malloc(sizeof(struct token));
-        add_list(root,t_num);
-        t_num->type = TCONST;
-        t_num->next = NULL;
+        
+        t_num = create_token(root,TCONST);
         t_num->i_val = 0;
+
         state = NUM;
       }
 
