@@ -119,7 +119,22 @@ int main()
   delete_bank(b);
   
   /* I need to learn why when passing bank *b; to a function, then inside the function calling malloc at
-   * that pointer, the memory wasn't being allocated */
+   * that pointer, the memory wasn't being allocated 
+   *
+   * Aha! I should of known the answer to this.. Obvious we get a copy of the variables passed to the function
+   * and the case is the same for pointers. So the local copy gets the allocated memory and the original doesnt
+   * know about it.
+   *
+   * There are ways around it, pass in a pointer to a pointer I want to allocate
+   *
+   * void init(bank **b){
+   *  *b = (bank*) malloc(sizeof(bank));
+   *  (*b)->xxx = 0;
+   * }
+   *
+   * or obviously allocate a tmp variable inside and return that.
+   *
+   * */
 
   return 0;
 }
