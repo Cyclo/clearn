@@ -98,6 +98,7 @@ void poke_string(bank *b,char *s)
   b->cur += len;
 
   memcpy(p,s,len);
+  b->data[b->cur] = '\0';
 }
 
 int main()
@@ -110,9 +111,11 @@ int main()
   poke_int(b,100);
 
   printf("%d\n",(int)*b->data);
-  
   printf("%d\n",peek_int(b,1));
 
+  poke_string(b,"Hello World!");
+
+  printf("%s\n",&(b->data[4]));
   delete_bank(b);
   
   /* I need to learn why when passing bank *b; to a function, then inside the function calling malloc at
