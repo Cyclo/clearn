@@ -22,6 +22,7 @@ main()
 {
 
   char str[255] = "Hello = 10\ntest=\"str\" another=\"t123,\" func(20,hello)";
+  printf("Parsing: %s\n",str);
   parse(str);
 
   return 0;
