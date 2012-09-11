@@ -100,7 +100,7 @@ nd_body *alloc_body(long l)
     die("out of memory");
   }
 
-  b->data = malloc(l+1);
+  b->data = malloc(l);
 
   if(!b->data){
     die("out of memory");
@@ -125,8 +125,6 @@ int read_file(char *p,char *b,long l)
   int status;
   status = fread(b,l,1,fp);
   
-  b[l] = '\0';
-
   fclose(fp);
   return status;
 }
@@ -140,11 +138,6 @@ void add_file(nd_file *f, char *path)
 
   nd_header *h = malloc(sizeof(nd_header));
   nd_header *last = get_last_header(f);
-
-  int offset = sizeof(struct nd_file);
-  if(last){
-    offset = last->length+last->offset;
-  }
 
   if(!h){
     die("out of memory");
@@ -161,7 +154,7 @@ void add_file(nd_file *f, char *path)
   char *fname = basename(path);
   strcpy(h->filename,fname);
 
-  h->offset = offset;
+  h->offset = -1;
   h->length = get_file_size(path);
   h->next = NULL;
   h->body = alloc_body(h->length);
@@ -195,6 +188,24 @@ void free_pack(nd_file *f)
   }
 }
 
+void calculate_offsets(nd_file *f)
+{
+
+  nd_header *h = f->headers;
+
+  int base,i;
+  i = 0;
+  base = sizeof(nd_file) + (f->count*sizeof(struct nd_header));
+  
+  while(h != NULL){
+    
+    h->offset = base;
+    base += h->length;
+
+    h = h->next;
+  }
+}
+
 void write_pack(nd_file *f, char *path)
 {
   FILE *fp;
@@ -203,6 +214,8 @@ void write_pack(nd_file *f, char *path)
   if(!fp){
     die("couldn't open file for writing");
   }
+
+  calculate_offsets(f);
 
   // write the header
   // TODO: Learn to write part of structure
@@ -214,6 +227,14 @@ void write_pack(nd_file *f, char *path)
   while(h != NULL){
 
     fwrite(h,1,sizeof(nd_header),fp);
+    h = h->next;
+  }
+
+  h = f->headers;
+
+  while(h != NULL){
+
+    fwrite(h->body->data,1,h->length,fp);
     h = h->next;
   }
 
@@ -243,8 +264,10 @@ void read_pack(nd_file *f, char *path)
   printf("read_pack: pack contains %d files\n",f->count);
 
   // Read the first header
-  int tcount = 0;
   nd_header *h,*t;
+  int tcount,cur,read;
+  
+  tcount = cur = read = 0;
   h = t = NULL;
 
   while(tcount < f->count){
@@ -264,7 +287,23 @@ void read_pack(nd_file *f, char *path)
     }
 
     fread(h,1,sizeof(struct nd_header),fp);
-    h->body = NULL;
+    cur = ftell(fp);
+    
+    printf("read_pack: header[%d] %s offset:%d length: %d\n",tcount,h->filename,h->offset,h->length);
+
+    h->body = alloc_body(h->length);
+    fseek(fp,h->offset,SEEK_SET);
+    
+    read = fread(h->body->data,1,h->length,fp);
+    //printf("%s\n",h->body->data);
+
+    // if read != h->length
+    
+    fseek(fp,cur,SEEK_SET);
+
+    // Store current cursor position
+    // Seek to h->offset, read h->length
+    // Seek back to cursor
 
     tcount++;
   }
@@ -286,6 +325,7 @@ void dump_pack(nd_file *f)
   printf("----HEAD DUMP----\n");
   while(h != NULL){
     printf("Filename:%s\nOffset:%d\nSize:%d\n----------\n",h->filename,h->offset,h->length);
+    printf("Body: %s\n",h->body->data);
     h = h->next;
   }
 }
@@ -302,7 +342,7 @@ int main()
 
   nd_file x = {0};
   read_pack(&x,"out.p");
-  dump_pack(&x);
+  //dump_pack(&x);
   free_pack(&x);
 
   return 0;
