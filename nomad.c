@@ -111,7 +111,7 @@ nd_body *alloc_body(long l)
 
 int read_file(char *p,char *b,long l)
 {
-  if(!p && strlen(p) <= 0){
+  if(!p ||  strlen(p) <= 0){
     return -1;
   }
 
@@ -295,21 +295,82 @@ void read_pack(nd_file *f, char *path)
     fseek(fp,h->offset,SEEK_SET);
     
     read = fread(h->body->data,1,h->length,fp);
-    //printf("%s\n",h->body->data);
 
-    // if read != h->length
-    
+    printf("read_pack: read %d bytes of body data for header[%d]\n",read,tcount);
+    if(read != h->length){
+      die("read_pack: didn't read correct amount of data");
+    }
+
+    // Seek back to next header
     fseek(fp,cur,SEEK_SET);
-
-    // Store current cursor position
-    // Seek to h->offset, read h->length
-    // Seek back to cursor
 
     tcount++;
   }
 
 
 cleanup:
+  fclose(fp);
+}
+
+nd_header *find_file(nd_file *f, char *filename)
+{
+
+  if(!f){
+    die("no nd_file");
+  }
+
+  if(!filename || strlen(filename) <= 0){
+    die("extract_file: no filename");
+  }
+
+  nd_header *h = f->headers;
+
+  while(h != NULL){
+
+    if(strcmp(h->filename,filename) == 0){
+      return h;
+    }
+
+    h = h->next;
+  }
+
+  return NULL;
+}
+
+
+void extract_file(nd_file *f, char *filename, char *path)
+{
+  if(!f){
+    die("no nd_file");
+  }
+
+  if(!filename || strlen(filename) <= 0){
+    die("extract_file: no filename");
+  }
+
+  if(!path || strlen(path) <= 0){
+    die("extract_file: no path specified");
+  }
+  
+  nd_header *h = find_file(f,filename);
+  if(!h){
+    printf("extract_file: no file found\n");
+    return;
+  }
+
+  FILE *fp;
+  fp = fopen(path,"wb");
+  
+  if(!fp){
+    die("extract_file: couldnt open file for writing");
+  }  
+  
+  if(!h->body->data){
+    die("extract_file: no body data");
+  }
+
+  int read = fwrite(h->body->data,1,h->length,fp);
+  printf("extract_file: write %d bytes of data to %s\n",read,path);
   fclose(fp);
 }
 
@@ -343,6 +404,7 @@ int main()
   nd_file x = {0};
   read_pack(&x,"out.p");
   //dump_pack(&x);
+  extract_file(&x,"test.txt","test.xxx");
   free_pack(&x);
 
   return 0;
