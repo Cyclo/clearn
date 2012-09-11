@@ -54,7 +54,6 @@ void create_pack(nd_file *f)
   f->headers = NULL;
   f->magic[0] = 'N';
   f->magic[1] = 'D';
-  f->magic[2] = '\0';
 }
 
 nd_header *get_last_header(nd_file *f)
