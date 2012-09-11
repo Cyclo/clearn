@@ -3,15 +3,22 @@
 #include <string.h>
 
 #define offsetof(st, m) \
-       ((size_t) ( (char *)&((st *)0)->m - (char *)0 ))
+  ((size_t) ( (char *)&((st *)0)->m - (char *)0 ))
+
+struct nd_body{
+
+  char *data;
+
+};
 
 struct nd_header{
-  
+
   char filename[255];
   long offset;             // offset of file, relative to 0
   long length;             // length of file
-  
+
   struct nd_header *next;  // next files header
+  struct nd_body *body;
 };
 
 struct nd_file{
@@ -25,6 +32,7 @@ struct nd_file{
 
 typedef struct nd_file nd_file;
 typedef struct nd_header nd_header;
+typedef struct nd_body nd_body;
 
 void die(char *s)
 {
@@ -33,7 +41,7 @@ void die(char *s)
 }
 
 char *basename(char *path){
-  
+
   char *p = strrchr(path,'/');
   if(!p){
     return path;
@@ -71,22 +79,6 @@ nd_header *get_last_header(nd_file *f)
   return t;
 }
 
-long get_next_offset(nd_file *f)
-{
-
-  if(!f){
-    die("No nd_file");
-  }
-  
-  nd_header *t = get_last_header(f);
-  
-  if(!t){
-    return sizeof(nd_file);
-  }
-
-  return (t->offset + t->length);
-}
-
 long get_file_size(char *path)
 {
   long size;
@@ -100,6 +92,46 @@ long get_file_size(char *path)
   return size;
 }
 
+nd_body *alloc_body(long l)
+{
+  nd_body *b = malloc(sizeof(struct nd_body));
+  
+  if(!b){
+    die("out of memory");
+  }
+
+  b->data = malloc(l+1);
+
+  if(!b->data){
+    die("out of memory");
+  }
+
+  return b;
+}
+
+int read_file(char *p,char *b,long l)
+{
+  if(!p && strlen(p) <= 0){
+    return -1;
+  }
+
+  FILE *fp;
+  fp = fopen(p,"rb");
+
+  if(!fp){
+    return -1;
+  }
+
+  int status;
+  status = fread(b,l,1,fp);
+  
+  b[l] = '\0';
+
+  fclose(fp);
+  return status;
+}
+
+
 void add_file(nd_file *f, char *path)
 {
   if(!f){
@@ -109,24 +141,34 @@ void add_file(nd_file *f, char *path)
   nd_header *h = malloc(sizeof(nd_header));
   nd_header *last = get_last_header(f);
 
+  int offset = sizeof(struct nd_file);
+  if(last){
+    offset = last->length+last->offset;
+  }
+
   if(!h){
     die("out of memory");
   }
-  
+
   if(last){
     last->next = h;
   }else{
     f->headers = h;
   }
 
+  f->count++;
+
   char *fname = basename(path);
   strcpy(h->filename,fname);
-  
-  h->offset = get_next_offset(f);
+
+  h->offset = offset;
   h->length = get_file_size(path);
   h->next = NULL;
+  h->body = alloc_body(h->length);
 
-  f->count++;
+  if(!read_file(path,h->body->data,h->length)){
+    die("couldn't read file body");
+  }
 }
 
 void free_pack(nd_file *f)
@@ -141,7 +183,14 @@ void free_pack(nd_file *f)
 
   while(h != NULL){
     t = h->next;
-    free(t);
+
+    if(h->body){
+      if(h->body->data){
+        free(h->body->data);
+      }
+      free(h->body);
+    }
+    free(h);
     h = t;
   }
 }
@@ -154,16 +203,16 @@ void write_pack(nd_file *f, char *path)
   if(!fp){
     die("couldn't open file for writing");
   }
-  
+
   // write the header
   // TODO: Learn to write part of structure
   fwrite(f,sizeof(nd_file),1,fp);
-  
+
   // Loop headers and write
   nd_header *h = f->headers;
 
   while(h != NULL){
-  
+
     fwrite(h,1,sizeof(nd_header),fp);
     h = h->next;
   }
@@ -182,9 +231,9 @@ void read_pack(nd_file *f, char *path)
 
   fread(f,1,sizeof(struct nd_file),fp);
   f->headers = NULL;
-  
+
   if(strcmp(f->magic,"ND") == 0){
-    
+
     printf("read_pack: magic confirmed: ND\n");
   }else{
     fprintf(stderr,"magic didn't match ND!=%s\n",f->magic);
@@ -199,15 +248,15 @@ void read_pack(nd_file *f, char *path)
   h = t = NULL;
 
   while(tcount < f->count){
-    if(h){
-      t = h;
-    }
+
+    if(h) t = h;
     h = malloc(sizeof(nd_header));
+
     if(!h){
       fclose(fp);
       die("out of memory");
     } 
-    
+
     if(!f->headers){
       f->headers = h;
     }else{
@@ -215,6 +264,8 @@ void read_pack(nd_file *f, char *path)
     }
 
     fread(h,1,sizeof(struct nd_header),fp);
+    h->body = NULL;
+
     tcount++;
   }
 
