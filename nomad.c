@@ -34,14 +34,16 @@ typedef struct nd_file nd_file;
 typedef struct nd_header nd_header;
 typedef struct nd_body nd_body;
 
-void die(char *s)
+void 
+die(char *s)
 {
   fprintf(stderr,"%s\n",s);
   exit(1);
 }
 
-char *basename(char *path){
-
+char *
+basename(char *path)
+{
   char *p = strrchr(path,'/');
   if(!p){
     return path;
@@ -50,7 +52,8 @@ char *basename(char *path){
   return p++;
 }
 
-void create_pack(nd_file *f)
+void 
+create_pack(nd_file *f)
 {
   if(!f){
     die("No nd_file allocated");
@@ -64,7 +67,8 @@ void create_pack(nd_file *f)
   f->magic[1] = 'D';
 }
 
-nd_header *get_last_header(nd_file *f)
+nd_header *
+get_last_header(nd_file *f)
 {
   if(!f){
     die("no nd_file");
@@ -79,7 +83,8 @@ nd_header *get_last_header(nd_file *f)
   return t;
 }
 
-long get_file_size(char *path)
+long 
+get_file_size(char *path)
 {
   long size;
   FILE *fp;
@@ -92,7 +97,8 @@ long get_file_size(char *path)
   return size;
 }
 
-nd_body *alloc_body(long l)
+nd_body *
+alloc_body(long l)
 {
   nd_body *b = malloc(sizeof(struct nd_body));
   
@@ -109,7 +115,8 @@ nd_body *alloc_body(long l)
   return b;
 }
 
-int read_file(char *p,char *b,long l)
+int 
+read_file(char *p,char *b,long l)
 {
   if(!p ||  strlen(p) <= 0){
     return -1;
@@ -130,7 +137,8 @@ int read_file(char *p,char *b,long l)
 }
 
 
-void add_file(nd_file *f, char *path)
+void 
+add_file(nd_file *f, char *path)
 {
   if(!f){
     die("No nd_file");
@@ -164,9 +172,9 @@ void add_file(nd_file *f, char *path)
   }
 }
 
-void free_pack(nd_file *f)
+void 
+free_pack(nd_file *f)
 {
-
   if(!f->headers){
     return;
   }
@@ -188,9 +196,9 @@ void free_pack(nd_file *f)
   }
 }
 
-void calculate_offsets(nd_file *f)
+void 
+calculate_offsets(nd_file *f)
 {
-
   nd_header *h = f->headers;
 
   int base,i;
@@ -206,7 +214,8 @@ void calculate_offsets(nd_file *f)
   }
 }
 
-void write_pack(nd_file *f, char *path)
+void 
+write_pack(nd_file *f, char *path)
 {
   FILE *fp;
   fp = fopen(path,"wb");
@@ -241,7 +250,8 @@ void write_pack(nd_file *f, char *path)
   fclose(fp);
 }
 
-void read_pack(nd_file *f, char *path)
+void 
+read_pack(nd_file *f, char *path)
 {
 
   FILE *fp;
@@ -312,9 +322,9 @@ cleanup:
   fclose(fp);
 }
 
-nd_header *find_file(nd_file *f, char *filename)
+nd_header *
+find_file(nd_file *f, char *filename)
 {
-
   if(!f){
     die("no nd_file");
   }
@@ -338,7 +348,8 @@ nd_header *find_file(nd_file *f, char *filename)
 }
 
 
-void extract_file(nd_file *f, char *filename, char *path)
+void 
+extract_file(nd_file *f, char *filename, char *path)
 {
   if(!f){
     die("no nd_file");
@@ -375,7 +386,8 @@ void extract_file(nd_file *f, char *filename, char *path)
 }
 
 
-void dump_pack(nd_file *f)
+void 
+dump_pack(nd_file *f)
 {
   if(!f && !f->headers){
     die("dump_pack: no headers or nd_file");
