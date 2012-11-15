@@ -1,3 +1,8 @@
+// Hippo, a simple http header parser
+// Probably broken only written to improve skills
+//
+// eddie.b eblundell@gmail.com
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
