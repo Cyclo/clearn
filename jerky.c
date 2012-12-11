@@ -3,9 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-void parse(char *);
-enum state {PROGRAM,IDENT,NUM,FUNC,DECL,OP,DELIM,QUOTE};
-enum tokens{TIDENT,TCONST,TASSIGN,TDELIM,TSTRING};
+enum state { PROGRAM,IDENT,NUM,FUNC,DECL,OP,DELIM,QUOTE,SIGSPACE};
+enum tokens{TIDENT,TCONST,TASSIGN,TDELIM,TSTRING,TSPACE};
 
 struct token{
 
@@ -17,20 +16,35 @@ struct token{
   struct token *next;
 };
 
+struct token *parse(char *);
+void free_list(struct token*);
+void dump_list(struct token*);
+
 int 
 main()
 {
 
   char str[255] = "Hello = 10\ntest=\"str\" another=\"t123,\" func(20,hello)";
   printf("Parsing: %s\n",str);
-  parse(str);
+  
+  // TODO: Change this initializaiton
+  struct token *t_root;
+  t_root = parse(str);
 
+  dump_list(t_root);
+  free_list(t_root);
+  
   return 0;
 }
 
 void 
 add_list(struct token *root,struct token *next)
 {
+  
+  if(!root){
+    return;
+  }
+
   struct token *tmp;
   
   if(root->next == NULL){
@@ -68,26 +82,21 @@ dump_list(struct token *root)
   }while((tmp = tmp->next) != NULL);
 
 }
-
+  
 void 
 free_list(struct token *root){
-  struct token *tmp = root;
-  
-  if(root == NULL) { 
+
+  if(!root){
     return;
   }
 
-  if(root->next == NULL){
-    free(root);
-    return;
-  }
+  struct token *t = NULL;
 
-  while((tmp = tmp->next) != NULL){
-    free(tmp);
-  }
-  
-  if(root){
+  while(root != NULL){
+
+    t = root->next;
     free(root);
+    root = t;
   }
 }
 
@@ -123,7 +132,7 @@ astrval(struct token *t, char c)
   t->s_val[t->curs+1] = '\0';
 }
 
-void 
+struct token *
 parse(char *s)
 {
   int state = PROGRAM;
@@ -207,8 +216,7 @@ parse(char *s)
     }
     
   }
-
-  dump_list(t_root);
-  free_list(t_root);
+  
+  return t_root;
 
 }
